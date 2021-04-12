@@ -21,6 +21,10 @@ public class Simulation
 	private SortedList<Partition> partitions;
 	private int time;
 	private int allocationCount;
+	private int holes;
+	private int averageHoleSize;
+	private int totalHoleSize;
+	private double percentFreeMemory;
 	
 	// Constructors
 	{
@@ -34,6 +38,10 @@ public class Simulation
 		partitions = new SortedList<Partition>();
 		time = 0;
 		allocationCount = 0;
+		holes = 1;
+		averageHoleSize = 1024;
+		totalHoleSize = 1024;
+		percentFreeMemory = 100;
 	}
 	
 	public Simulation(String path)
@@ -60,9 +68,11 @@ public class Simulation
 		
 		// Run through the simulation
 		while(true)
-		{	
+		{
 			System.out.println("Time " + time + ": " + partitionsString());
 			System.out.println(processesString());
+			System.out.println("Holes: " + holes + "   Average Size: " + averageHoleSize + "   Total Size: "
+					+ totalHoleSize + String.format("   Free Memory %.2f", percentFreeMemory) + "%");
 			System.out.print("Press enter to continue");
 			scan.nextLine();
 			// Partition for processes until needing to wait
@@ -107,6 +117,7 @@ public class Simulation
 					System.out.println("Time " + time + ": Allocation of partition | " + processPartition + " | at address " + processPartition.getAddress());
 					partitions.add(processPartition);
 					allocationCount++;
+					totalHoleSize -= processPartition.getSize();
 					if(partition.getSize()!=process.getProcessSize())
 					{
 						Partition freePartition = new Partition(partition.getSize()-process.getProcessSize(),partition.getAddress()+process.getProcessSize());
@@ -130,10 +141,14 @@ public class Simulation
 						System.out.println("Time " + time + ": Deallocation of partition | " + partition + " | at address " + partition.getAddress());
 						partition.deallocate();
 						allocationCount--;
+						holes++;
+						totalHoleSize += partition.getSize();
 					}
 				}
 			}
 			partitionMerge();
+			averageHoleSize = totalHoleSize/holes;
+			percentFreeMemory = ((double)totalHoleSize/memoryMax)*100;
 			if(allocationCount==0&&processes.size()==0) break;
 		}
 		System.out.println(partitionsString());
@@ -187,6 +202,7 @@ public class Simulation
 					partitions.remove(partition);
 					partitions.add(newPart);
 					partition = newPart;
+					holes--;
 				}
 			}
 			else
@@ -197,13 +213,6 @@ public class Simulation
 	}
 	
 	// toString
-	public String toString()
-	{
-		String toString = "";
-		for(CustomProcess process : processes) toString += process + "\n";	
-		return toString;
-	}
-	
 	public String partitionsString()
 	{
 		String toString = "| ";
@@ -216,5 +225,5 @@ public class Simulation
 		String toString = "Waiting Processes: ";
 		for(CustomProcess process : processes) toString += "[P" + process.getPID() + " - " + process.getProcessSize() + "KB], ";
 		return toString.substring(0,toString.length()-2);
-	}
+	}	
 }
